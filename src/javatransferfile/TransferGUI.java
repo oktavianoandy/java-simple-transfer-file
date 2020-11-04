@@ -7,10 +7,13 @@ package javatransferfile;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import javax.swing.JFileChooser;
@@ -25,18 +28,27 @@ public class TransferGUI extends javax.swing.JFrame {
     /**
      * Creates new form TransferGUI
      */
-    private String ip = "";
-    private String path = "";
+    private String ipClient = "";
     private String fileName = "";
-    private String savePath = "";
+    private static String path = "";
+    private static int port;
 
     public TransferGUI() {
         initComponents();
         this.setLocationRelativeTo(null);
         this.setTitle("Simple Transfer File");
+
+        //set ip client
         setIP();
-        path = "//" + ip + "/users/";
+
+        //set direktori default pc client
+        path = "//" + ipClient + "/public";
+
+        //tampil direktory pc client
         showClientDirectory();
+
+        //menset tombol enter untuk pindah2 directory
+        this.getRootPane().setDefaultButton(btnPindah);
     }
 
     /**
@@ -50,10 +62,10 @@ public class TransferGUI extends javax.swing.JFrame {
 
         jScrollPane1 = new javax.swing.JScrollPane();
         jTextArea1 = new javax.swing.JTextArea();
-        jButton1 = new javax.swing.JButton();
-        jButton2 = new javax.swing.JButton();
+        btnDownload = new javax.swing.JButton();
+        btnUpload = new javax.swing.JButton();
         jTextField1 = new javax.swing.JTextField();
-        jButton3 = new javax.swing.JButton();
+        btnPindah = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -62,27 +74,32 @@ public class TransferGUI extends javax.swing.JFrame {
         jTextArea1.setRows(5);
         jScrollPane1.setViewportView(jTextArea1);
 
-        jButton1.setText("Download");
-        jButton1.addActionListener(new java.awt.event.ActionListener() {
+        btnDownload.setText("Download");
+        btnDownload.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton1ActionPerformed(evt);
+                btnDownloadActionPerformed(evt);
             }
         });
 
-        jButton2.setText("Upload");
-        jButton2.addActionListener(new java.awt.event.ActionListener() {
+        btnUpload.setText("Upload");
+        btnUpload.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton2ActionPerformed(evt);
+                btnUploadActionPerformed(evt);
             }
         });
 
-        jTextField1.setText("users/");
-        jTextField1.setMargin(new java.awt.Insets(3, 2, 2, 2));
+        jTextField1.setText("/public");
+        jTextField1.setMargin(new java.awt.Insets(4, 2, 2, 2));
 
-        jButton3.setText("Pindah");
-        jButton3.addActionListener(new java.awt.event.ActionListener() {
+        btnPindah.setText("Pindah");
+        btnPindah.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton3ActionPerformed(evt);
+                btnPindahActionPerformed(evt);
+            }
+        });
+        btnPindah.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                btnPindahKeyPressed(evt);
             }
         });
 
@@ -94,14 +111,14 @@ public class TransferGUI extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 249, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btnDownload, javax.swing.GroupLayout.PREFERRED_SIZE, 249, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 236, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(btnUpload, javax.swing.GroupLayout.PREFERRED_SIZE, 236, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 503, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 390, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
-                        .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(btnPindah, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
@@ -110,37 +127,65 @@ public class TransferGUI extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton3, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btnPindah, javax.swing.GroupLayout.PREFERRED_SIZE, 39, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 376, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(btnDownload, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnUpload, javax.swing.GroupLayout.PREFERRED_SIZE, 42, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton3ActionPerformed
+    private void btnPindahActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPindahActionPerformed
         // TODO add your handling code here:
-        path = "//" + ip + "/" + jTextField1.getText();
+
+        //set path ketika berpindah direktori
+        path = "//" + ipClient + jTextField1.getText();
+
+        //mengkosongkan textArea setelah pindah direktori
         jTextArea1.setText("");
+
+        //menampilkan direktori yang baru setelah pindah
         showClientDirectory();
-    }//GEN-LAST:event_jButton3ActionPerformed
+    }//GEN-LAST:event_btnPindahActionPerformed
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void btnDownloadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDownloadActionPerformed
         // TODO add your handling code here:
+
+        //mendapatkan nama file yang akan didownload
         fileName = JOptionPane.showInputDialog(null, "Masukkan nama file yang akan di download : ");
-        path = "//" + ip + "/" + jTextField1.getText() + "/" + fileName;
-        readFileBeforeDownload();
-    }//GEN-LAST:event_jButton1ActionPerformed
 
-    private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
+        //mendapatkan path file yang akan didownload
+        path = "//" + ipClient + jTextField1.getText() + "/" + fileName;
+
+        //baca isi dari file txt sebelum didownload
+        readFileBeforeDownload();
+    }//GEN-LAST:event_btnDownloadActionPerformed
+
+    private void btnUploadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUploadActionPerformed
         // TODO add your handling code here:
 
-    }//GEN-LAST:event_jButton2ActionPerformed
+        //pilih file yang akan diupload
+        chooseFileToUpload();
+    }//GEN-LAST:event_btnUploadActionPerformed
+
+    private void btnPindahKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_btnPindahKeyPressed
+        // TODO add your handling code here:
+        if (evt.getKeyCode() == evt.VK_ENTER) {
+            //set path ketika berpindah direktori
+            path = "//" + ipClient + jTextField1.getText();
+
+            //mengkosongkan textArea setelah pindah direktori
+            jTextArea1.setText("");
+
+            //menampilkan direktori yang baru setelah pindah
+            showClientDirectory();
+        }
+    }//GEN-LAST:event_btnPindahKeyPressed
 
     /**
      * @param args the command line arguments
@@ -174,21 +219,15 @@ public class TransferGUI extends javax.swing.JFrame {
             new TransferGUI().setVisible(true);
         });
 
-        startServer();
-    }
+        //set port yang akan digunakan
+        setPort();
 
-    private static void startServer() {
-        try {
-            ServerSocket ss = new ServerSocket(1111);
-            while (true) {
-                Socket sk = ss.accept();
-            }
-        } catch (Exception e) {
-            System.out.println(e);
-        }
+        //function untuk menerima file upload dari client
+        receiveFile();
     }
 
     private void readFileBeforeDownload() {
+        //kode program untuk membaca file terlebih dahulu sebelum download
         String dataTemp;
         String data = "";
         try {
@@ -205,45 +244,106 @@ public class TransferGUI extends javax.swing.JFrame {
     }
 
     private void chooseDowloadFileDirectory(String data) {
-        try {
-            JFileChooser fc = new JFileChooser();
-            fc.setDialogTitle("Specify a file to save");
-            int userSelection = fc.showSaveDialog(null);
-            if (userSelection == JFileChooser.APPROVE_OPTION) {
-                savePath = fc.getSelectedFile().getPath();
-                File fileToSave = fc.getSelectedFile();
-
-                if (fileToSave.exists()) {
-                    int result = JOptionPane.showConfirmDialog(null, "The file is already exists, overwrite?", "Existing file", JOptionPane.OK_CANCEL_OPTION);
-                    switch (result) {
-                        case JOptionPane.YES_OPTION:
-                            downloadFile(data);
-                        case JOptionPane.CANCEL_OPTION:
-                    }
-                } else {
-                    downloadFile(data);
+        //kode program untuk memilih direktori untuk file yang didownload
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Tentukan direktori file download di komputer kamu");
+        int userSelection = fc.showSaveDialog(null);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            path = fc.getSelectedFile().getPath();
+            File fileToSave = fc.getSelectedFile();
+            if (fileToSave.exists()) {
+                int result = JOptionPane.showConfirmDialog(null, "File sudah ada, timpa?", "File sudah ada", JOptionPane.OK_CANCEL_OPTION);
+                switch (result) {
+                    case JOptionPane.YES_OPTION:
+                        downloadFile(data);
+                    case JOptionPane.CANCEL_OPTION:
                 }
+            } else {
+                downloadFile(data);
+            }
+        }
+    }
+
+    private void downloadFile(String data) {
+        //kode program proses download file
+        try {
+            FileWriter fw = new FileWriter(path);
+            BufferedWriter bw = new BufferedWriter(fw);
+            bw.write(data);
+            bw.flush();
+            bw.close();
+            JOptionPane.showMessageDialog(null, "Download berhasil!");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Download gagal!");
+            JOptionPane.showMessageDialog(null, e);
+        }
+    }
+
+    private void chooseFileToUpload() {
+        //kode program memilih file yang akan diupload
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Pilih file yang akan diupload");
+        int userSelection = fc.showDialog(null, "Upload");
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            path = "//" + ipClient + jTextField1.getText() + "/" + fc.getSelectedFile().getName();
+            uploadFile(fc.getSelectedFile().getPath());
+        }
+    }
+
+    private void uploadFile(String path) {
+        //kode program untuk upload file
+        String dataTemp;
+        String data = this.path + "\n";
+        try {
+            Socket sk = new Socket(ipClient, port);
+            FileReader fr = new FileReader(path);
+            BufferedReader br = new BufferedReader(fr);
+            while ((dataTemp = br.readLine()) != null) {
+                data = data + dataTemp + "\n";
+            }
+            DataOutputStream dos = new DataOutputStream(sk.getOutputStream());
+            dos.writeBytes(data);
+            br.close();
+            JOptionPane.showMessageDialog(this, "Upload Berhasil!");
+
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Ups! sepertinya upload gagal.");
+            JOptionPane.showMessageDialog(this, e);
+            System.out.println(e);
+        }
+    }
+
+    private static void receiveFile() {
+        //kode program untuk menerima file yang diupload client
+        try {
+            ServerSocket ss = new ServerSocket(port);
+            String data = "";
+            String downloadPath = "";
+            while (true) {
+                Socket sk = ss.accept();
+                DataInputStream dis = new DataInputStream(sk.getInputStream());
+                downloadPath = dis.readLine();
+                while (dis.available() > 0) {
+                    data = data + dis.readLine() + "\n";
+                }
+                System.out.println(downloadPath);
+                FileWriter fw = new FileWriter(downloadPath);
+                BufferedWriter bw = new BufferedWriter(fw);
+                bw.write(data);
+                bw.flush();
+                bw.close();
+                dis.close();
+                data = "";
+                downloadPath = "";
             }
         } catch (Exception e) {
             System.out.println(e);
         }
     }
 
-    private void downloadFile(String data) {
-        try {
-            FileWriter fw = new FileWriter(savePath);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(data);
-            bw.flush();
-            bw.close();
-            JOptionPane.showMessageDialog(null, "Save success!");
-        } catch (IOException e) {
-            System.out.println(e);
-            JOptionPane.showMessageDialog(null, "Save Failed!");
-        }
-    }
-
     private void showClientDirectory() {
+        //kode program untuk menampilkan directory yang ada di pc client
         System.out.println(path);
         File file = new File(path);
         File[] files = file.listFiles();
@@ -255,18 +355,61 @@ public class TransferGUI extends javax.swing.JFrame {
     }
 
     private void setIP() {
+        //kode program untuk set ip client
         String ipTujuan = JOptionPane.showInputDialog(null, "Masukkan IP tujuan : ");
         if (ipTujuan != null) {
-            ip = ipTujuan;
+            ipClient = ipTujuan;
         } else {
             System.exit(0);
         }
     }
 
+    private static void setPort() {
+        //kode program untuk set port yang akan digunakan
+        String inputPort = JOptionPane.showInputDialog("Masukkan port");
+        if (inputPort != null) {
+            while (availablePort(Integer.parseInt(inputPort)) != true) {
+                JOptionPane.showMessageDialog(null, "Ups, Port telah digunakan, ganti port lainya!");
+                inputPort = JOptionPane.showInputDialog("Masukkan port tujuan");
+            }
+            port = Integer.parseInt(inputPort);
+        } else {
+            System.exit(0);
+        }
+    }
+
+    private static boolean availablePort(int port) {
+        //kode program untuk 
+        ServerSocket ss = null;
+        DatagramSocket ds = null;
+        try {
+            ss = new ServerSocket(port);
+            ss.setReuseAddress(true);
+            ds = new DatagramSocket(port);
+            ds.setReuseAddress(true);
+            return true;
+        } catch (IOException e) {
+        } finally {
+            if (ds != null) {
+                ds.close();
+            }
+
+            if (ss != null) {
+                try {
+                    ss.close();
+                } catch (IOException e) {
+                    /* should not be thrown */
+                }
+            }
+        }
+
+        return false;
+    }
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JButton jButton2;
-    private javax.swing.JButton jButton3;
+    private javax.swing.JButton btnDownload;
+    private javax.swing.JButton btnPindah;
+    private javax.swing.JButton btnUpload;
     private javax.swing.JScrollPane jScrollPane1;
     private static javax.swing.JTextArea jTextArea1;
     private javax.swing.JTextField jTextField1;
