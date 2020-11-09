@@ -5,19 +5,12 @@
  */
 package javatransferfile;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.ServerSocket;
-import java.net.Socket;
+import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 
 /**
  *
@@ -28,25 +21,14 @@ public class TransferGUI extends javax.swing.JFrame {
     /**
      * Creates new form TransferGUI
      */
-    private String ipClient = "";
-    private String fileName = "";
-    private static String path = "";
-    private static int port;
+    
+    private Transfer controller;
 
     public TransferGUI() {
         initComponents();
         this.setLocationRelativeTo(null);
         this.setTitle("Simple Transfer File");
-
-        //set ip client
-        setIP();
-
-        //set direktori default pc client
-        path = "//" + ipClient + "/public";
-
-        //tampil direktory pc client
-        showClientDirectory();
-
+        controller =new Transfer(this);
         //menset tombol enter untuk pindah2 directory
         this.getRootPane().setDefaultButton(btnPindah);
     }
@@ -75,33 +57,13 @@ public class TransferGUI extends javax.swing.JFrame {
         jScrollPane1.setViewportView(jTextArea1);
 
         btnDownload.setText("Download");
-        btnDownload.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnDownloadActionPerformed(evt);
-            }
-        });
 
         btnUpload.setText("Upload");
-        btnUpload.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnUploadActionPerformed(evt);
-            }
-        });
 
         jTextField1.setText("/public");
         jTextField1.setMargin(new java.awt.Insets(4, 2, 2, 2));
 
         btnPindah.setText("Pindah");
-        btnPindah.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnPindahActionPerformed(evt);
-            }
-        });
-        btnPindah.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyPressed(java.awt.event.KeyEvent evt) {
-                btnPindahKeyPressed(evt);
-            }
-        });
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -140,53 +102,6 @@ public class TransferGUI extends javax.swing.JFrame {
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnPindahActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnPindahActionPerformed
-        // TODO add your handling code here:
-
-        //set path ketika berpindah direktori
-        path = "//" + ipClient + jTextField1.getText();
-
-        //mengkosongkan textArea setelah pindah direktori
-        jTextArea1.setText("");
-
-        //menampilkan direktori yang baru setelah pindah
-        showClientDirectory();
-    }//GEN-LAST:event_btnPindahActionPerformed
-
-    private void btnDownloadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDownloadActionPerformed
-        // TODO add your handling code here:
-
-        //mendapatkan nama file yang akan didownload
-        fileName = JOptionPane.showInputDialog(null, "Masukkan nama file yang akan di download : ");
-
-        //mendapatkan path file yang akan didownload
-        path = "//" + ipClient + jTextField1.getText() + "/" + fileName;
-
-        //baca isi dari file txt sebelum didownload
-        readFileBeforeDownload();
-    }//GEN-LAST:event_btnDownloadActionPerformed
-
-    private void btnUploadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUploadActionPerformed
-        // TODO add your handling code here:
-
-        //pilih file yang akan diupload
-        chooseFileToUpload();
-    }//GEN-LAST:event_btnUploadActionPerformed
-
-    private void btnPindahKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_btnPindahKeyPressed
-        // TODO add your handling code here:
-        if (evt.getKeyCode() == evt.VK_ENTER) {
-            //set path ketika berpindah direktori
-            path = "//" + ipClient + jTextField1.getText();
-
-            //mengkosongkan textArea setelah pindah direktori
-            jTextArea1.setText("");
-
-            //menampilkan direktori yang baru setelah pindah
-            showClientDirectory();
-        }
-    }//GEN-LAST:event_btnPindahKeyPressed
-
     /**
      * @param args the command line arguments
      */
@@ -198,7 +113,7 @@ public class TransferGUI extends javax.swing.JFrame {
          */
         try {
             for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
+                if ("Windows".equals(info.getName())) {
                     javax.swing.UIManager.setLookAndFeel(info.getClassName());
                     break;
                 }
@@ -220,191 +135,40 @@ public class TransferGUI extends javax.swing.JFrame {
         });
 
         //set port yang akan digunakan
-        setPort();
+        Transfer.setPort();
 
         //function untuk menerima file upload dari client
-        receiveFile();
+        Transfer.receiveFile();
     }
 
-    private void readFileBeforeDownload() {
-        //kode program untuk membaca file terlebih dahulu sebelum download
-        String dataTemp;
-        String data = "";
-        try {
-            FileReader fr = new FileReader(path);
-            BufferedReader br = new BufferedReader(fr);
-            while ((dataTemp = br.readLine()) != null) {
-                data = data + dataTemp + "\n";
-            }
-            chooseDowloadFileDirectory(data);
-            br.close();
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Ups! sepertinya file tidak ada.");
-        }
+    public Transfer getController() {
+        return controller;
     }
 
-    private void chooseDowloadFileDirectory(String data) {
-        //kode program untuk memilih direktori untuk file yang didownload
-        JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Tentukan direktori file download di komputer kamu");
-        int userSelection = fc.showSaveDialog(null);
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            path = fc.getSelectedFile().getPath();
-            File fileToSave = fc.getSelectedFile();
-            if (fileToSave.exists()) {
-                int result = JOptionPane.showConfirmDialog(null, "File sudah ada, timpa?", "File sudah ada", JOptionPane.OK_CANCEL_OPTION);
-                switch (result) {
-                    case JOptionPane.YES_OPTION:
-                        downloadFile(data);
-                    case JOptionPane.CANCEL_OPTION:
-                }
-            } else {
-                downloadFile(data);
-            }
-        }
+    public JButton getBtnDownload() {
+        return btnDownload;
     }
 
-    private void downloadFile(String data) {
-        //kode program proses download file
-        try {
-            FileWriter fw = new FileWriter(path);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(data);
-            bw.flush();
-            bw.close();
-            JOptionPane.showMessageDialog(null, "Download berhasil!");
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Download gagal!");
-            JOptionPane.showMessageDialog(null, e);
-        }
+    public JButton getBtnPindah() {
+        return btnPindah;
     }
 
-    private void chooseFileToUpload() {
-        //kode program memilih file yang akan diupload
-        JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Pilih file yang akan diupload");
-        int userSelection = fc.showDialog(null, "Upload");
-
-        if (userSelection == JFileChooser.APPROVE_OPTION) {
-            path = "//" + ipClient + jTextField1.getText() + "/" + fc.getSelectedFile().getName();
-            uploadFile(fc.getSelectedFile().getPath());
-        }
+    public JButton getBtnUpload() {
+        return btnUpload;
     }
 
-    private void uploadFile(String path) {
-        //kode program untuk upload file
-        String dataTemp;
-        String data = this.path + "\n";
-        try {
-            Socket sk = new Socket(ipClient, port);
-            FileReader fr = new FileReader(path);
-            BufferedReader br = new BufferedReader(fr);
-            while ((dataTemp = br.readLine()) != null) {
-                data = data + dataTemp + "\n";
-            }
-            DataOutputStream dos = new DataOutputStream(sk.getOutputStream());
-            dos.writeBytes(data);
-            br.close();
-            JOptionPane.showMessageDialog(this, "Upload Berhasil!");
-
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this, "Ups! sepertinya upload gagal.");
-            JOptionPane.showMessageDialog(this, e);
-            System.out.println(e);
-        }
+    public JScrollPane getjScrollPane1() {
+        return jScrollPane1;
     }
 
-    private static void receiveFile() {
-        //kode program untuk menerima file yang diupload client
-        try {
-            ServerSocket ss = new ServerSocket(port);
-            String data = "";
-            String downloadPath = "";
-            while (true) {
-                Socket sk = ss.accept();
-                DataInputStream dis = new DataInputStream(sk.getInputStream());
-                downloadPath = dis.readLine();
-                while (dis.available() > 0) {
-                    data = data + dis.readLine() + "\n";
-                }
-                System.out.println(downloadPath);
-                FileWriter fw = new FileWriter(downloadPath);
-                BufferedWriter bw = new BufferedWriter(fw);
-                bw.write(data);
-                bw.flush();
-                bw.close();
-                dis.close();
-                data = "";
-                downloadPath = "";
-            }
-        } catch (Exception e) {
-            System.out.println(e);
-        }
+    public static JTextArea getjTextArea1() {
+        return jTextArea1;
     }
 
-    private void showClientDirectory() {
-        //kode program untuk menampilkan directory yang ada di pc client
-        System.out.println(path);
-        File file = new File(path);
-        File[] files = file.listFiles();
-        for (File file1 : files) {
-            if (!file1.isHidden()) {
-                jTextArea1.append(file1.getName() + "\n");
-            }
-        }
+    public JTextField getjTextField1() {
+        return jTextField1;
     }
 
-    private void setIP() {
-        //kode program untuk set ip client
-        String ipTujuan = JOptionPane.showInputDialog(null, "Masukkan IP tujuan : ");
-        if (ipTujuan != null) {
-            ipClient = ipTujuan;
-        } else {
-            System.exit(0);
-        }
-    }
-
-    private static void setPort() {
-        //kode program untuk set port yang akan digunakan
-        String inputPort = JOptionPane.showInputDialog("Masukkan port");
-        if (inputPort != null) {
-            while (availablePort(Integer.parseInt(inputPort)) != true) {
-                JOptionPane.showMessageDialog(null, "Ups, Port telah digunakan, ganti port lainya!");
-                inputPort = JOptionPane.showInputDialog("Masukkan port tujuan");
-            }
-            port = Integer.parseInt(inputPort);
-        } else {
-            System.exit(0);
-        }
-    }
-
-    private static boolean availablePort(int port) {
-        //kode program untuk 
-        ServerSocket ss = null;
-        DatagramSocket ds = null;
-        try {
-            ss = new ServerSocket(port);
-            ss.setReuseAddress(true);
-            ds = new DatagramSocket(port);
-            ds.setReuseAddress(true);
-            return true;
-        } catch (IOException e) {
-        } finally {
-            if (ds != null) {
-                ds.close();
-            }
-
-            if (ss != null) {
-                try {
-                    ss.close();
-                } catch (IOException e) {
-                    /* should not be thrown */
-                }
-            }
-        }
-
-        return false;
-    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnDownload;
